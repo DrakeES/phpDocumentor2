@@ -97,12 +97,7 @@ class Json extends WriterAbstract
                 //'fqn' => $subElement->getFullyQualifiedStructuralElementName()
             ];
             if ($subElement instanceof ClassDescriptor) {
-                if ($subElement->isAbstract()) {
-                    $node['abstract'] = true;
-                }
-                if ($subElement->isFinal()) {
-                    $node['final'] = true;
-                }
+                self::addFlags($subElement, $node);
                 if (($parent = $subElement->getParent()) && is_object($parent)) {
                     $node['extends'] = $parent->getFullyQualifiedStructuralElementName();
                 }
@@ -117,6 +112,7 @@ class Json extends WriterAbstract
                         continue;
                     }
                     $m = ['name' => $method->getName()];
+                    self::addFlags($method, $m);
                     foreach ($method->getArguments() as $argument) {
                         self::addEl($m, 'args', $argument->getName());
                     }
@@ -138,6 +134,16 @@ class Json extends WriterAbstract
             $this->buildNamespaceTree($sub_graph, $element);
         }
         $graph['namespaces'][] = $sub_graph;
+    }
+
+    private static function addFlags($subElement, &$node)
+    {
+        foreach (array('abstract', 'final', 'static') as $k) {
+            $m = 'is' . $k;
+            if ($subElement->{$m}()) {
+                $node[$k] = true;
+            }
+        }
     }
 
     private static function addEl(&$holder, $key, $el)
