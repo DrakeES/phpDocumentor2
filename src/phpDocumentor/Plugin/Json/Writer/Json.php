@@ -110,28 +110,17 @@ class Json extends WriterAbstract
                     if (!is_object($implements)) {
                         continue;
                     }
-                    if (!isset($node['implements'])) {
-                        $node['implements'] = [];
-                    }
-                    $node['implements'][] = $implements->getFullyQualifiedStructuralElementName();
+                    self::addEl($node, 'implements', $implements->getFullyQualifiedStructuralElementName());
                 }
                 foreach ($subElement->getMethods() as $method) {
                     if (!$method || ($method->getVisibility() !== 'public')) {
                         continue;
                     }
-                    if (!isset($node['methods'])) {
-                        $node['methods'] = [];
-                    }
-                    $m = [
-                        'name' => $method->getName()
-                    ];
+                    $m = ['name' => $method->getName()];
                     foreach ($method->getArguments() as $argument) {
-                        if (!isset($m['args'])) {
-                            $m['args'] = [];
-                        }
-                        $m['args'][] = $argument->getName();
+                        self::addEl($m, 'args', $argument->getName());
                     }
-                    $node['methods'][] = $m;
+                    self::addEl($node, 'methods', $m);
                 }
             }
             if ($subElement instanceof InterfaceDescriptor) {
@@ -149,6 +138,14 @@ class Json extends WriterAbstract
             $this->buildNamespaceTree($sub_graph, $element);
         }
         $graph['namespaces'][] = $sub_graph;
+    }
+
+    private static function addEl(&$holder, $key, $el)
+    {
+        if (!isset($holder[$key])) {
+            $holder[$key] = [];
+        }
+        $holder[$key][] = $el;
     }
 
     /**
