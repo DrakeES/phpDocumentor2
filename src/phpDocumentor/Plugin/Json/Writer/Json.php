@@ -100,6 +100,9 @@ class Json extends WriterAbstract
                 if ($subElement->isAbstract()) {
                     $node['abstract'] = true;
                 }
+                if ($subElement->isFinal()) {
+                    $node['final'] = true;
+                }
                 if (($parent = $subElement->getParent()) && is_object($parent)) {
                     $node['extends'] = $parent->getFullyQualifiedStructuralElementName();
                 }
@@ -111,6 +114,24 @@ class Json extends WriterAbstract
                         $node['implements'] = [];
                     }
                     $node['implements'][] = $implements->getFullyQualifiedStructuralElementName();
+                }
+                foreach ($subElement->getMethods() as $method) {
+                    if (!$method || ($method->getVisibility() !== 'public')) {
+                        continue;
+                    }
+                    if (!isset($node['methods'])) {
+                        $node['methods'] = [];
+                    }
+                    $m = [
+                        'name' => $method->getName()
+                    ];
+                    foreach ($method->getArguments() as $argument) {
+                        if (!isset($m['args'])) {
+                            $m['args'] = [];
+                        }
+                        $m['args'][] = $argument->getName();
+                    }
+                    $node['methods'][] = $m;
                 }
             }
             if ($subElement instanceof InterfaceDescriptor) {
