@@ -1,13 +1,4 @@
 <?php
-/**
- * phpDocumentor
- *
- * PHP Version 5.3
- *
- * @copyright 2010-2014 Mike van Riel / Naenius (http://www.naenius.com)
- * @license   http://www.opensource.org/licenses/mit-license.php MIT
- * @link      http://phpdoc.org
- */
 
 namespace phpDocumentor\Plugin\Json\Writer;
 
@@ -36,19 +27,6 @@ class Json extends WriterAbstract
      */
     public function transform(ProjectDescriptor $project, Transformation $transformation)
     {
-        $this->processClass($project, $transformation);
-    }
-
-    /**
-     * Creates namespace/class hierarchy.
-     *
-     * @param ProjectDescriptor $project
-     * @param Transformation    $transformation
-     *
-     * @return void
-     */
-    public function processClass(ProjectDescriptor $project, Transformation $transformation)
-    {
         $filename = $this->getDestinationPath($transformation);
         $graph = [
             'namespaces' => []
@@ -63,7 +41,6 @@ class Json extends WriterAbstract
         // }
         // foreach ($containers as $container) {
         //     $from_name = $container->getFullyQualifiedStructuralElementName();
-
         //     $parents     = array();
         //     $implemented = array();
         //     if ($container instanceof ClassDescriptor) {
@@ -105,7 +82,7 @@ class Json extends WriterAbstract
             $full_namespace_name = 'Global';
         }
         $sub_graph = [
-            'fullNamespace' => $full_namespace_name,
+            'fqn' => $full_namespace_name,
             'namespace' => $namespace->getName()
         ];
         $elements = array_merge(
@@ -113,14 +90,34 @@ class Json extends WriterAbstract
             $namespace->getInterfaces()->getAll(),
             $namespace->getTraits()->getAll()
         );
-        /** @var ClassDescriptor|InterfaceDescriptor|TraitDescriptor $sub_element */
-        foreach ($elements as $sub_element) {
+        /** @var ClassDescriptor|InterfaceDescriptor|TraitDescriptor $subElement */
+        foreach ($elements as $subElement) {
             $node = [
-                'name' => $sub_element->getName(),
-                'fqn' => $sub_element->getFullyQualifiedStructuralElementName()
+                'name' => $subElement->getName()
+                //'fqn' => $subElement->getFullyQualifiedStructuralElementName()
             ];
-            if ($sub_element instanceof ClassDescriptor && $sub_element->isAbstract()) {
-                $node['abstract'] = true;
+            if ($subElement instanceof ClassDescriptor) {
+                if ($subElement->isAbstract()) {
+                    $node['abstract'] = true;
+                }
+                if (($parent = $subElement->getParent()) && is_object($parent)) {
+                    $node['extends'] = $parent->getFullyQualifiedStructuralElementName();
+                }
+                foreach ($subElement->getInterfaces()->getAll() as $implements) {
+                    if (!is_object($implements)) {
+                        continue;
+                    }
+                    if (!isset($node['implements'])) {
+                        $node['implements'] = [];
+                    }
+                    $node['implements'][] = $implements->getFullyQualifiedStructuralElementName();
+                }
+            }
+            if ($subElement instanceof InterfaceDescriptor) {
+                $node['interface'] = true;
+            }
+            if ($subElement instanceof TraitDescriptor) {
+                $node['trait'] = true;
             }
             if (!isset($sub_graph['nodes'])) {
                 $sub_graph['nodes'] = [];
