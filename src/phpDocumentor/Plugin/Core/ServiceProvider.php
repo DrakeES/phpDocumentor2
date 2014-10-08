@@ -56,5 +56,6 @@ class ServiceProvider implements ServiceProviderInterface
         $app->register(new \phpDocumentor\Plugin\Graphs\ServiceProvider());
         $app->register(new \phpDocumentor\Plugin\Twig\ServiceProvider());
         $app->register(new \phpDocumentor\Plugin\Pdf\ServiceProvider());
+        $app->register(new \phpDocumentor\Plugin\Json\ServiceProvider);
     }
 }
