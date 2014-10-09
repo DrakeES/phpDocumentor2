@@ -2,7 +2,9 @@
 
 namespace phpDocumentor\Plugin\Json\Writer;
 
+use phpDocumentor\Descriptor\DescriptorAbstract;
 use phpDocumentor\Descriptor\ClassDescriptor;
+use phpDocumentor\Descriptor\Type\UnknownTypeDescriptor;
 use phpDocumentor\Descriptor\Collection;
 use phpDocumentor\Descriptor\InterfaceDescriptor;
 use phpDocumentor\Descriptor\NamespaceDescriptor;
@@ -15,7 +17,14 @@ use Zend\Stdlib\Exception\ExtensionNotLoadedException;
 class Json extends WriterAbstract
 {
 
-    private $keys = ['classes', 'interfaces', 'traits'];
+    // private static $keys = ['classes', 'interfaces', 'traits'];
+
+    // private static $defaults = [
+    //     'false' => false,
+    //     'true' => true,
+    //     'null' => null,
+    //     'array()' => []
+    // ];
 
     /**
      * Invokes the query method contained in this class.
@@ -96,6 +105,7 @@ class Json extends WriterAbstract
                 'name' => $subElement->getName()
                 //'fqn' => $subElement->getFullyQualifiedStructuralElementName()
             ];
+            self::addDoc($subElement, $node);
             if ($subElement instanceof ClassDescriptor) {
                 self::addFlags($subElement, $node);
                 if (($parent = $subElement->getParent()) && is_object($parent)) {
@@ -112,9 +122,50 @@ class Json extends WriterAbstract
                         continue;
                     }
                     $m = ['name' => $method->getName()];
+                    self::addDoc($method, $m);
                     self::addFlags($method, $m);
+                    foreach ($method->getTags() as $tagGroup) {
+                        if (!$tagGroup) {
+                            continue;
+                        }
+                        foreach ($tagGroup as $tag) {
+                            if ($tag->getName() !== 'return') {
+                                continue;
+                            }
+                            foreach ($tag->getTypes() as $type) {
+                                self::addEl($m, 'returns', (string)$type);
+                            }
+                        }
+                        if (isset($m['returns']) && count($m['returns']) === 1) {
+                            $m['returns'] = $m['returns'][0];
+                        }
+                    }
                     foreach ($method->getArguments() as $argument) {
-                        self::addEl($m, 'args', $argument->getName());
+                        $a = [
+                            'name' => $argument->getName()
+                        ];
+                        if (($def = $argument->getDefault()) !== null) {
+                            $a['default'] = $def;
+                        }
+                        if ($argument->isByReference()) {
+                            $a['byreference'] = true;
+                        }
+                        $types = $argument->getTypes();
+                        $typeStrings = [];
+                        foreach ($types as $type) {
+                            $str = (string)($type instanceof DescriptorAbstract
+                                ? $type->getFullyQualifiedStructuralElementName()
+                                :
+                                ($type instanceof UnknownTypeDescriptor ? $type->getName() : $type));
+                            if ($str === '') {
+                                continue;
+                            }
+                            $typeStrings[] = $str;
+                        }
+                        if (count($typeStrings)) {
+                            $a['type'] = $typeStrings;
+                        }
+                        self::addEl($m, 'args', $a);
                     }
                     self::addEl($node, 'methods', $m);
                 }
@@ -142,6 +193,16 @@ class Json extends WriterAbstract
             $m = 'is' . $k;
             if ($subElement->{$m}()) {
                 $node[$k] = true;
+            }
+        }
+    }
+
+    private static function addDoc($element, &$node)
+    {
+        foreach (array('summary', 'description') as $k) {
+            $m = 'get' . $k;
+            if ($r = $element->{$m}()) {
+                $node[$k] = $r;
             }
         }
     }
