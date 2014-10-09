@@ -136,9 +136,9 @@ class Json extends WriterAbstract
                                 self::addEl($m, 'returns', (string)$type);
                             }
                         }
-                        if (isset($m['returns']) && count($m['returns']) === 1) {
-                            $m['returns'] = $m['returns'][0];
-                        }
+                    }
+                    if (isset($m['returns']) && is_array($m['returns']) && count($m['returns']) === 1) {
+                        $m['returns'] = $m['returns'][0];
                     }
                     foreach ($method->getArguments() as $argument) {
                         $a = [
@@ -163,6 +163,9 @@ class Json extends WriterAbstract
                             $typeStrings[] = $str;
                         }
                         if (count($typeStrings)) {
+                            if (count($typeStrings) === 1) {
+                                $typeStrings = $typeStrings[0];
+                            }
                             $a['type'] = $typeStrings;
                         }
                         self::addEl($m, 'args', $a);
